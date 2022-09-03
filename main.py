@@ -1,16 +1,18 @@
 from benchmark import *
 from curve_fitting import *
 from prediction import *
+from data_visualisation import *
 
-if __name__ == "__main":
-    benchmark()
+plot_data()
 
-    calibrate_reservoir_pressure()
-    calibrate_subsidence()
+benchmark()
 
-    plot_model()
+calibrate_reservoir_pressure()
+calibrate_subsidence()
 
-    plot_misfit(True)
-    plot_misfit(False)
-    
-    forecast([1250, 900, 600, 0])
+plot_model()
+
+plot_misfit(True)
+plot_misfit(False)
+
+forecast([1250, 900, 600, 0])
