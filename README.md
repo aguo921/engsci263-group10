@@ -71,9 +71,15 @@ by hand.
 ### Benchmarking
 The `benchmark.py` file performs benchmarking, error analysis and timestep convergence.
 
+**Reservoir pressure**
+
 ![reservoir pressure benchmark](plots/reservoir_pressure_benchmark.png)
 
+**Mudstone pressure**
+
 ![mudstone pressure benchmark](plots/mudstone_pressure_benchmark.png)
+
+**Subsidence**
 
 ![subsidence benchmark](plots/subsidence_benchmark.png)
 
@@ -83,11 +89,17 @@ to the given data, returning the best-fit parameters.
 
 The `model_calibration.py` plots the reservoir pressure and subsidence solutions with the best-fit parameters.
 
+**Best-fit model for reservoir pressure and subsidence**
+
 ![best fit models](plots/best_fit_models.png)
 
 The `model_calibration.py` also plots the misfits when the model is calibrated with vs without slow drainage.
 
+**Pressure misfit without slow drainage**
+
 ![pressure misfit without slow drainage](plots/pressure_misfit_without_slow_drainage.png)
+
+**Pressure misfit with slow drainage**
 
 ![pressure misfit with slow drainage](plots/pressure_misfit_with_slow_drainage.png)
 
