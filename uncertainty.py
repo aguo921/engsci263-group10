@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 
 oranges = plt.get_cmap('Oranges')
 
+# TODO: select uncertain parameters (2-3)
+# TODO: future predictions with uncertainty
+# TODO: histogram of final value
+# TODO: document code
+# TODO: refactor code
+
 def grid_search():
     a_best = 0.0015377621974240604
     b_best = 0.06624924440742241
@@ -29,7 +35,7 @@ def grid_search():
     P0 = 56.26
     c = 0.007883715689885993
 
-    v = 2.
+    v = 2.  # error variance - 2 bar
 
     for i in range(len(a)):
         for j in range(len(b)):
