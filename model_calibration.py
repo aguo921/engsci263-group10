@@ -184,7 +184,7 @@ def plot_misfit(slow_drainage=False):
     _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b1, c, P0])
 
     # calculate the pressure misfit
-    misfit = P - pres
+    misfit = pres - P
 
     fig, (ax1, ax2) = plt.subplots(ncols=2)
 
