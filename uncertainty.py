@@ -1,326 +1,389 @@
 from model_calibration import *
-import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
-oranges = plt.get_cmap('Oranges')
+def Pmodel(t, *pars):
+    """ Return reservoir pressure at a set of times for a given set of parameters.
 
-# TODO: select uncertain parameters (2-3)
-# TODO: future predictions with uncertainty
-# TODO: histogram of final value
-# TODO: document code
-# TODO: refactor code
+        Parameters
+        ----------
+        t : array-like
+            Vector of time (year).
+        pars : list
+            List of parameters to be fitted [a, b1].
 
-def grid_search():
-    a_best = 0.0015377621974240604
-    b_best = 0.06624924440742241
-
-    N = 51
-
-    a = np.linspace(a_best*0.8, a_best*1.2, N)
-    b = np.linspace(b_best*0.8, b_best*1.2, N)
-
-    A, B = np.meshgrid(a, b, indexing='ij')
-
-    S = np.zeros(A.shape)
-
-    to, Po = load_pressure_data()
-
-    t0 = to[0]
-    t1 = to[-1]
-    dt = to[1] - to[0]
-
-    t = time_range(t0, t1, dt)
+        Returns
+        -------
+        P : array-like
+            Vector of reservoir pressure (bar).
+    """
     q = interpolate_mass_extraction_rate(t)
     dqdt = dq_dt(t, q)
 
-    P0 = 56.26
+    t0 = t[0]
+    t1 = t[-1]
+    dt = t[1] - t[0]
+
+    # fixed parameters
     c = 0.007883715689885993
+    P0 = 56.26
 
-    v = 2.  # error variance - 2 bar
+    # parameters to be fitted
+    (a, b1) = pars
 
-    for i in range(len(a)):
-        for j in range(len(b)):
-            _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a[i], b[j], c, P0])
-            S[i,j] = np.sum((Po - P)**2)/v
+    _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b1, c, P0])
+    return P
 
-    P = np.exp(-S/2.)
+def Umodel(t, *pars):
+    """ Return subsidence at a set of times for a given set of parameters.
 
-    Pint = np.sum(P) * (a[1] - a[0]) * (b[1] - b[0])
+        Parameters
+        ----------
+        t : array-like
+            Vector of time (year).
+        pars : list
+            List of parameters to be fitted [b2, mv].
 
-    P = P/Pint
+        Returns
+        -------
+        U : Vector of subsidence (m).
 
-    plot_posterior(a, b, P=P)
-
-    return a, b, P
-
-def plot_posterior(a, b, c=None, P=None):
-    if c is None:
-        plot_posterior2D(a, b, P)
-    else:
-        plot_poseterior3D(a, b, c, P)
-
-def plot_posterior2D(a, b, P):
-    A, B = np.meshgrid(a, b)
-
-    fig = plt.figure(figsize=[10., 7.])
-    ax1 = fig.add_subplot(111, projection='3d')
-    ax1.plot_surface(A, B, P, rstride=1, cstride=1, cmap=oranges, lw=0.5, edgecolor='k')
-
-    ax1.set_xlabel('a')
-    ax1.set_ylabel('b')
-    ax1.set_xlabel('P')
-
-    ax1.set_xlim(a[0], a[-1])
-    ax1.set_ylim(b[0], b[-1])
-    ax1.set_zlim(0., )
-
-    ax1.view_init(40, 100.)
-
-    plt.show()
-
-def plot_poseterior3D(a, b, c, P):
-    azim = 15.
-
-    Ab, Ba = np.meshgrid(a, b, indexing='ij')
-    Pab = np.zeros(Ab.shape)
-    for i in range(len(a)):
-        for j in range(len(b)):
-            Pab[i][j] = sum([P[i][j][k] for k in range(len(c))])
-
-    Ac, Ca = np.meshgrid(a, c, indexing='ij')
-    Pac = np.zeros(Ac.shape)
-    for i in range(len(a)):
-        for k in range(len(c)):
-            Pac[i][k] = sum([P[i][j][k] for j in range(len(b))])
-
-    Bc, Cb = np.meshgrid(b, c, indexing='ij')
-    Pbc = np.zeros(Bc.shape)
-    for j in range(len(b)):
-        for k in range(len(c)):
-            Pbc[j][k] = sum([P[i][j][k] for i in range(len(a))])
-
-    fig = plt.figure(figsize=[20.0, 15.])
-    ax1 = fig.subplot(221, projection='3d')
-    ax1.plot_surface(Ab, Ba, Pab, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-
-    ax1.set_xlabel('a')
-    ax1.set_ylabel('b')
-    ax1.set_zlabel('P')
-    ax1.set_xlim([a[0], a[-1]])
-    ax1.set_ylim([b[0], b[-1]])
-    ax1.set_zlim(0., )
-    ax1.view_init(40, azim)
-
-    ax2 = fig.add_subplot(222, projection='3d')
-    ax2.plot_surface(Ac, Ca, Pac, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-    ax2.set_xlabel('a')
-    ax2.set_ylabel('c')
-    ax2.set_zlabel('P')
-    ax2.set_xlim([a[0], a[-1]])
-    ax2.set_ylim([c[0], c[-1]])
-    ax2.set_zlim(0., )
-    ax2.view_init(40, azim)
-
-    ax3 = fig.add_subplot(223, projection='3d')
-    ax3.plot_surface(Bc, Cb, Pbc, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-    ax3.set_xlabel('b')
-    ax3.set_ylabel('c')
-    ax3.set_zlabel('P')
-    ax3.set_xlim([b[0], b[-1]])
-    ax3.set_ylim([c[0], c[-1]])
-    ax3.set_zlim(0., )
-    ax3.view_init(40, azim)
-
-    # save and show
-    plt.show()
-
-def fit_mvn(parspace, dist):
-    N = len(parspace)
-
-    parspace = [p.flatten() for p in parspace]
-    dist = dist.flatten()
-
-    mean = [np.sum(dist*par)/np.sum(dist) for par in parspace]
-
-    cov = np.zeros((N,N))
-    for i in range(N):
-        for j in range(i,N):
-            cov[i,j] = np.sum(dist*(parspace[i] - mean[i]) * (parspace[j] - mean[j])) / np.sum(dist)
-            if i != j: cov[j,i] = cov[i,j]
-
-    return np.array(mean), np.array(cov)
-
-def construct_samples(a, b, P, N_samples):
-    A, B = np.meshgrid(a, b, indexing='ij')
-    mean, covariance = fit_mvn([A, B], P)
-
-    samples = np.random.multivariate_normal(mean, covariance, N_samples)
-
-    plot_samples(a, b, P=P, samples=samples)
-
-    return samples
-
-def plot_samples(a, b, c=None, P=None, samples=None):
-    if c is None:
-        plot_samples2D(a, b, P, samples)
-    else:
-        plot_samples3D(a, b, c, P, samples)
-
-def plot_samples2D(a, b, P, samples):
-    fig = plt.figure(figsize=[10., 7.])
-    ax1 = fig.add_subplot(111, projection='3d')
-    A, B = np.meshgrid(a, b, indexing='ij')
-    ax1.plot_surface(A, B, P, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-
-    to, Po = load_pressure_data()
-    v = 2
-
-    t0 = to[0]
-    t1 = to[-1]
-    dt = to[1] - to[0]
-
-    t = time_range(t0, t1, dt)
+    """
     q = interpolate_mass_extraction_rate(t)
     dqdt = dq_dt(t, q)
 
-    P0 = 56.26
+    t0 = t[0]
+    t1 = t[-1]
+    dt = t[1] - t[0]
+
+    # fixed parameters
+    a = 0.0015377621974240604
+    b1 = 0.06624924440742241
     c = 0.007883715689885993
+    P0 = 56.26
+    Pm0 = 56.26
+    L = 100
 
-    s = []
-    for a, b in samples:
-        _, pres = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b, c, P0])
-        s.append(np.sum((pres - Po)**2) / v)
-    s = np.array(s)
+    # parameters to be fitted
+    (b2, mv) = pars
 
-    p = np.exp(-s/2.)
-    p = p/np.max(p) * np.max(P)
+    _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b1, c, P0])
+    _, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
+    U = subsidence_eqn(Pm, Pm0, mv, L)
+    return U
 
-    ax1.plot(*samples.T, p, 'k.')
+def calibrate_pressure(v):
+    """ Calculate best fit parameters and covariance to reservoir pressure data.
 
-    ax1.set_xlabel('a')
-    ax1.set_ylabel('b')
-    ax1.set_zlabel('P')
-    ax1.set_zlim(0., )
-    ax1.view_init(40, 100.)
+        Parameters
+        ----------
+        v : float
+            Observational error of the reservoir pressure data.
 
-    # save and show
-    plt.show()
-
-def plot_samples3D(a, b, c, P, samples):
-    azim = 15.
-
-    # a and b combination
-    Ab, Ba = np.meshgrid(a, b, indexing='ij')
-    Pab = np.zeros(Ab.shape)
-    for i in range(len(a)):
-        for j in range(len(b)):
-            Pab[i][j] = sum([P[i][j][k] for k in range(len(c))])
-
-    # a and c combination
-    Ac, Ca = np.meshgrid(a, c, indexing='ij')
-    Pac = np.zeros(Ac.shape)
-    for i in range(len(a)):
-        for k in range(len(c)):
-            Pac[i][k] = sum([P[i][j][k] for j in range(len(b))])
-
-    # b and c combination
-    Bc, Cb = np.meshgrid(b, c, indexing='ij')
-    Pbc = np.zeros(Bc.shape)
-    for j in range(len(b)):
-        for k in range(len(c)):
-            Pbc[j][k] = sum([P[i][j][k] for i in range(len(a))])
-
+        Returns
+        -------
+        pars : tuple of float
+            Tuple of the best fit parameters a and b1 respectively.
+        cov : np.array
+            Covariance matrix.
+    """
     to, Po = load_pressure_data()
-    v = 2
 
-    t0 = to[0]
-    t1 = to[-1]
-    dt = to[1] - to[0]
+    # interpolate subsidence at defined time intervals
+    t = time_range(to[0], to[-1], 1)
+    U = np.interp(t, to, Po)
 
-    t = time_range(t0, t1, dt)
+    p0 = [1.62e-3,7.15e-2]  # initial guess of a and b1
+
+    sigma = [v] * len(t)
+
+    pars, cov = curve_fit(Pmodel, to, Po, p0, sigma=sigma)
+
+    return pars, cov
+
+def calibrate_subsidence(v):
+    """ Calculate best fit parameters and covariance to subsidence data.
+
+        Parameters
+        ----------
+        v : float
+            Observational error of the subsidence data.
+
+        Returns
+        -------
+        pars : tuple of float
+            Tuple of the best fit parameters b2 and mv respectively.
+        cov : np.array
+            Covariance matrix.
+    """
+    to, Uo = load_subsidence_data()
+
+    # interpolate subsidence at equal time intervals
+    t = time_range(to[0], to[-1], 1)
+    U = np.interp(t, to, Uo)
+
+    p0 = [1.62e-3,7.15e-2]  # initial guess of b2 and mv
+
+    sigma = [v] * len(t)
+
+    pars, cov = curve_fit(Umodel, t, U, p0, sigma=sigma)
+
+    return pars, cov
+
+
+def model_ensemble():
+    """ Plot the ensemble of models based on uncertainty of the data. """
+    to, Uo = load_subsidence_data()
+
+    t = time_range(to[0], to[-1], 1)
+
+    v_pres = 1.  # uncertainty on pressure observations
+    p_pres, cov_pres = calibrate_pressure(v_pres)  # best fit parameters and covariance
+    ps_pres = np.random.multivariate_normal(p_pres, cov_pres, 25)  # samples from posterior
+
+    v_sub = 0.5  # uncertainty on subsidence observations
+    p_sub, cov_sub = calibrate_subsidence(v_sub)  # best fit parameters and covariance
+    ps_sub = np.random.multivariate_normal(p_sub, cov_sub, 25)  # samples from posterior
+
+    # create figure
+    fig, (ax1, ax2) = plt.subplots(ncols=2)
+
+    # calculate mass extraction and derivative
     q = interpolate_mass_extraction_rate(t)
     dqdt = dq_dt(t, q)
 
-    P0 = 56.26
+    # get start and end times and time step
+    t0 = t[0]
+    t1 = t[-1]
+    dt = t[1] - t[0]
 
-    s = []
-    for a, b, c in samples:
-        _, pres = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b, c, P0])
-        s.append(np.sum((pres - Po)**2) / v)
-    s = np.array(s)
-
-    p = np.exp(-s / 2.)
-    p = p / np.max(p) * np.max(P) * 1.2
-
-    # plotting
-    fig = plt.figure(figsize=[20.0, 15.])
-    ax1 = fig.add_subplot(221, projection='3d')
-    ax1.plot_surface(Ab, Ba, Pab, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-    ax1.set_xlabel('a')
-    ax1.set_ylabel('b')
-    ax1.set_zlabel('P')
-    ax1.set_xlim([a[0], a[-1]])
-    ax1.set_ylim([b[0], b[-1]])
-    ax1.set_zlim(0., )
-    ax1.view_init(40, azim)
-    ax1.plot(samples[:, 0], samples[:, 1], p, 'k.')
-
-    ax1 = fig.add_subplot(222, projection='3d')
-    ax1.plot_surface(Ac, Ca, Pac, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-    ax1.set_xlabel('a')
-    ax1.set_ylabel('c')
-    ax1.set_zlabel('P')
-    ax1.set_xlim([a[0], a[-1]])
-    ax1.set_ylim([c[0], c[-1]])
-    ax1.set_zlim(0., )
-    ax1.view_init(40, azim)
-    ax1.plot(samples[:, 0], samples[:, -1], p, 'k.')
-
-    ax1 = fig.add_subplot(223, projection='3d')
-    ax1.plot_surface(Bc, Cb, Pbc, rstride=1, cstride=1, cmap=oranges, lw=0.5)
-    ax1.set_xlabel('b')
-    ax1.set_ylabel('c')
-    ax1.set_zlabel('P')
-    ax1.set_xlim([b[0], b[-1]])
-    ax1.set_ylim([c[0], c[-1]])
-    ax1.set_zlim(0., )
-    ax1.view_init(40, azim)
-    ax1.plot(samples[:, 1], samples[:, -1], p, 'k.')
-
-    # save and show
-    plt.show()
-
-def model_ensemble(samples):
-    to, Po = load_pressure_data()
-
-    f, ax = plt.subplots(1, 1)
-
-    t0 = to[0]
-    t1 = to[-1]
-    dt = to[1] - to[0]
-
-    t = time_range(t0, t1, dt)
-    q = interpolate_mass_extraction_rate(t)
-    dqdt = dq_dt(t, q)
-
-    P0 = 56.26
+    # best fit parameters
+    a = 0.0015377621974240604
+    b1 = 0.06624924440742241
+    b2 = 0.031776570956506885
     c = 0.007883715689885993
+    P0 = 56.26
+    Pm0 = 56.26
+    L = 100
+    mv = 0.007905952772346621
 
-    for a, b in samples:
-        _, pres = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b, c, P0])
-        ax.plot(t, pres, 'k-', lw=0.25, alpha=0.2)
-    ax.plot([], [], 'k-', lw=0.5, alpha=0.4, label='model ensemble')
+    # plot best fit model
+    t, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b1, c, P0])
+    t, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
+    U = subsidence_eqn(Pm, Pm0, mv, L)
+    ax1.plot(t, P, 'r-', label='best-fit')
+    ax2.plot(t, U, 'r-', label='best-fit')
 
-    v = 2.
-    ax.errorbar(to, Po, yerr=v, fmt='ro', label='data')
-    ax.set_xlabel('time [years]')
-    ax.set_ylabel('pressure [bars]')
-    ax.legend()
+    # loop through posterior samples
+    for a, b1 in ps_pres:
+        for b2, mv in ps_sub:
+            # plot model for set of sampled parameters
+            t, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, q, dqdt, [a, b1, c, P0])
+            t, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
+            U = subsidence_eqn(Pm, Pm0, mv, L)
+            ax1.plot(t, P, 'k-', lw=0.25, alpha=0.2)
+            ax2.plot(t, U, 'k-', lw=0.25, alpha=0.2)
+    ax1.plot([], [], 'k-', lw=0.5, label='posterior samples')
+    ax2.plot([], [], 'k-', lw=0.5, label='posterior samples')
+
+    # plot pressure observations with error bars
+    ax1.errorbar(*load_pressure_data(), yerr=v_pres, fmt='ro', label='data')
+    ax1.set_xlabel('time [years]')
+    ax1.set_ylabel('reservoir pressure [bars]')
+    ax1.legend()
+
+    # plot subsidence observations with error bars
+    ax2.errorbar(*load_subsidence_data(), yerr=v_sub, fmt='ro', label='data')
+    ax2.set_xlabel('time [years]')
+    ax2.set_ylabel('subsidence [m]')
+    ax2.legend()
+
+    # display the figure
     plt.show()
+
+def forecast():
+    """ Forecast the reservoir pressure and subsidence with uncertainty. """
+    a = 0.0015377621974240604  # lumped parameter for forced extraction term
+    b1 = 0.06624924440742241  # lumped parameter for recharge term (into reservoir)
+    c = 0.007883715689885993  # lumped parameter for slow drainage term
+    P0 = 56.26  # initial/ambient reservoir pressure
+    b2 = 0.031776570956506885  # lumped parameter for recharge term (into mudstone)
+    mv = 0.007905952772346621  # compressibility of mudstone
+    L = 100  # thickness of mudstone
+    Pm0 = 56.26  # initial/ambient mudstone pressure
+
+    to, Po = load_pressure_data()
+
+    t0 = to[0]
+    t1 = to[-1]
+    dt = 1
+
+    # get observed time range plus prediction time range
+    ti = time_range(t0, t1, dt)
+    tP = time_range(t1+dt,2042,dt)
+    t = np.concatenate((ti,tP))
+
+    # get mass extraction rate and derivative
+    q0 = interpolate_mass_extraction_rate(ti)
+
+    v_pres = 1.  # uncertainty on pressure observations
+    p_pres, cov_pres = calibrate_pressure(v_pres)  # best fit parameters and covariance
+    ps_pres = np.random.multivariate_normal(p_pres, cov_pres, 25)  # samples from posterior
+
+    v_sub = 0.5  # uncertainty on subsidence observations
+    p_sub, cov_sub = calibrate_subsidence(v_sub)  # best fit parameters and covariance
+    ps_sub = np.random.multivariate_normal(p_sub, cov_sub, 25)  # samples from posterior
+
+    # create figure
+    fig, (ax1, ax2) = plt.subplots(nrows=2)
+
+    # plot observations
+    ax1.plot(*load_pressure_data(), '.', label="observations")
+    ax2.plot(*load_subsidence_data(), '.', label="observations")
+
+    # plot best-fit solution
+    a, b1 = p_pres
+    b2, mv = p_sub
+
+    qi = interpolate_mass_extraction_rate(ti)
+    _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, qi, dq_dt(ti, qi), [a, b1, c, P0])
+    _, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
+    U = subsidence_eqn(Pm, Pm0, mv, L)
+
+    ax1.plot(ti, P, label="best-fit model")
+    ax2.plot(ti, U, label="best-fit model")
+
+    # forecast for q = 1250 kg/s
+    qp = 1250*np.ones(len(tP))
+    q=np.concatenate((q0,qp))
+    dqdt = dq_dt(t, q)
+
+    for a, b1 in ps_pres:
+        for b2, mv in ps_sub:
+            _, P = solve_reservoir_ode(reservoir_ode, t[0], t[-1], dt, P0, q, dqdt, [a, b1, c, P0])
+            _, Pm = solve_mudstone_ode(mudstone_ode, t[0], t[-1], dt, P, Pm0, [b2])
+            U = subsidence_eqn(Pm, Pm0, mv, L)
+            ax1.plot(t, P, 'b-', lw=0.25, alpha=0.05)
+            ax2.plot(t, U, 'b-', lw=0.25, alpha=0.05)
+    ax1.plot([], [], 'b-', lw=0.5, label='q=1250kg/s')
+    ax2.plot([], [], 'b-', lw=0.5, label='q=1250kg/s')
+
+    # forecast for q = 900 kg/s
+    qp = 900*np.ones(len(tP))
+    q=np.concatenate((q0,qp))
+    dqdt = dq_dt(t, q)
+
+    for a, b1 in ps_pres:
+        for b2, mv in ps_sub:
+            _, P = solve_reservoir_ode(reservoir_ode, t[0], t[-1], dt, P0, q, dqdt, [a, b1, c, P0])
+            _, Pm = solve_mudstone_ode(mudstone_ode, t[0], t[-1], dt, P, Pm0, [b2])
+            U = subsidence_eqn(Pm, Pm0, mv, L)
+            ax1.plot(t, P, 'g-', lw=0.25, alpha=0.05)
+            ax2.plot(t, U, 'g-', lw=0.25, alpha=0.05)
+    ax1.plot([], [], 'g-', lw=0.5, label='q=900kg/s')
+    ax2.plot([], [], 'g-', lw=0.5, label='q=900kg/s')
+
+    # forecast for q = 600 kg/s
+    qp = 600*np.ones(len(tP))
+    q=np.concatenate((q0,qp))
+    dqdt = dq_dt(t, q)
+
+    for a, b1 in ps_pres:
+        for b2, mv in ps_sub:
+            _, P = solve_reservoir_ode(reservoir_ode, t[0], t[-1], dt, P0, q, dqdt, [a, b1, c, P0])
+            _, Pm = solve_mudstone_ode(mudstone_ode, t[0], t[-1], dt, P, Pm0, [b2])
+            U = subsidence_eqn(Pm, Pm0, mv, L)
+            ax1.plot(t, P, 'r-', lw=0.25, alpha=0.05)
+            ax2.plot(t, U, 'r-', lw=0.25, alpha=0.05)
+    ax1.plot([], [], 'r-', lw=0.5, label='q=600kg/s')
+    ax2.plot([], [], 'r-', lw=0.5, label='q=600kg/s')
+
+    # forecast for q = 0 kg/s
+    qp = np.zeros(len(tP))
+    q=np.concatenate((q0,qp))
+    dqdt = dq_dt(t, q)
+
+    for a, b1 in ps_pres:
+        for b2, mv in ps_sub:
+            _, P = solve_reservoir_ode(reservoir_ode, t[0], t[-1], dt, P0, q, dqdt, [a, b1, c, P0])
+            _, Pm = solve_mudstone_ode(mudstone_ode, t[0], t[-1], dt, P, Pm0, [b2])
+            U = subsidence_eqn(Pm, Pm0, mv, L)
+            ax1.plot(t, P, 'm-', lw=0.25, alpha=0.05)
+            ax2.plot(t, U, 'm-', lw=0.25, alpha=0.05)
+    ax1.plot([], [], 'm-', lw=0.5, label='q=0kg/s')
+    ax2.plot([], [], 'm-', lw=0.5, label='q=0kg/s')
+
+    # set axis labels and legends
+    ax1.set_ylabel('pressure [bar]')
+    ax2.set_ylabel('subsidence [m]')
+    ax1.set_xlabel('time [yrs]')
+    ax2.set_xlabel('time [yrs]')
+    ax1.legend()
+    ax2.legend()
+
+    # display figure
+    fig.set_size_inches(12, 6)
+    plt.show()
+
+def parameter_histogram():
+    """ Plot probability distribution histograms of uncertain parameters. """
+
+    v_pres = 1.  # uncertainty on pressure observations
+    p_pres, cov_pres = calibrate_pressure(v_pres)  # best fit parameters and covariance matrix
+    ps_pres = np.random.multivariate_normal(p_pres, cov_pres, 1000)  # samples from posterior
+
+    v_sub = 0.5  # uncertainty on subsidence observations
+    p_sub, cov_sub = calibrate_subsidence(v_sub)  # best fit parameters and covariance matrix
+    ps_sub = np.random.multivariate_normal(p_sub, cov_sub, 1000)  # samples from posterior
+
+    # initialise parameter lists
+    a = []
+    b1 = []
+    b2 = []
+    mv = []
+
+    # add samples to parameter lists
+    for pi in ps_pres:
+        a.append(pi[0])
+        b1.append(pi[1])
+
+    for pi in ps_sub:
+        b2.append(pi[0])
+        mv.append(pi[1])
+
+    # plot distribution of parameter a
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
+    ax1.hist(a,bins=20,density=True)
+    ax1.axvline(np.percentile(a,5), color='r')
+    ax1.axvline(np.percentile(a,95), color='r')
+    ax1.set_xlabel('a')
+    ax1.set_ylabel('probability density')
+
+    # plot distribution of parameter b1
+    ax2.hist(b1,bins=20,density=True)
+    ax2.axvline(np.percentile(b1,5), color='r')
+    ax2.axvline(np.percentile(b1,95), color='r')
+    ax2.set_xlabel('b1')
+    ax2.set_ylabel('probability density')
+
+    # plot distribution of parameter b2
+    ax3.hist(b2,bins=20,density=True)
+    ax3.axvline(np.percentile(b2,5), color='r')
+    ax3.axvline(np.percentile(b2,95), color='r')
+    ax3.set_xlabel('b2')
+    ax3.set_ylabel('probability density')
+
+    # plot distribution of parameter mv
+    ax4.hist(mv,bins=20,density=True)
+    ax4.axvline(np.percentile(mv,5), color='r')
+    ax4.axvline(np.percentile(mv,95), color='r')
+    ax4.set_xlabel('mv')
+    ax4.set_ylabel('probability density')
+
+    # display figure
+    fig.set_size_inches(10,5)
+    fig.show()
 
 if __name__ == "__main__":
-    a, b, posterior = grid_search()
-
-    N = 100
-    samples = construct_samples(a, b, posterior, N)
-
-    model_ensemble(samples)
+    model_ensemble()
+    forecast()
+    parameter_histogram()
