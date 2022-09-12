@@ -234,23 +234,7 @@ def forecast():
     ps_sub = np.random.multivariate_normal(p_sub, cov_sub, 25)  # samples from posterior
 
     # create figure
-    fig, (ax1, ax2) = plt.subplots(nrows=2)
-
-    # plot observations
-    ax1.plot(*load_pressure_data(), '.', label="observations")
-    ax2.plot(*load_subsidence_data(), '.', label="observations")
-
-    # plot best-fit solution
-    a, b1 = p_pres
-    b2, mv = p_sub
-
-    qi = interpolate_mass_extraction_rate(ti)
-    _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, qi, dq_dt(ti, qi), [a, b1, c, P0])
-    _, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
-    U = subsidence_eqn(Pm, Pm0, mv, L)
-
-    ax1.plot(ti, P, label="best-fit model")
-    ax2.plot(ti, U, label="best-fit model")
+    fig, (ax1, ax2) = plt.subplots(ncols=2)
 
     # forecast for q = 1250 kg/s
     qp = 1250*np.ones(len(tP))
@@ -312,6 +296,22 @@ def forecast():
     ax1.plot([], [], 'm-', lw=0.5, label='q=0kg/s')
     ax2.plot([], [], 'm-', lw=0.5, label='q=0kg/s')
 
+    # plot best-fit solution
+    a, b1 = p_pres
+    b2, mv = p_sub
+
+    qi = interpolate_mass_extraction_rate(ti)
+    _, P = solve_reservoir_ode(reservoir_ode, t0, t1, dt, P0, qi, dq_dt(ti, qi), [a, b1, c, P0])
+    _, Pm = solve_mudstone_ode(mudstone_ode, t0, t1, dt, P, Pm0, [b2])
+    U = subsidence_eqn(Pm, Pm0, mv, L)
+
+    ax1.plot(ti, P, label="best-fit model")
+    ax2.plot(ti, U, label="best-fit model")
+
+    # plot observations
+    ax1.plot(*load_pressure_data(), '.', label="observations")
+    ax2.plot(*load_subsidence_data(), '.', label="observations")
+
     # set axis labels and legends
     ax1.set_ylabel('pressure [bar]')
     ax2.set_ylabel('subsidence [m]')
@@ -321,7 +321,7 @@ def forecast():
     ax2.legend()
 
     # display figure
-    fig.set_size_inches(12, 6)
+    fig.set_size_inches(10, 5)
     plt.show()
 
 def parameter_histogram():
@@ -384,6 +384,6 @@ def parameter_histogram():
     fig.show()
 
 if __name__ == "__main__":
-    model_ensemble()
+    # model_ensemble()
     forecast()
-    parameter_histogram()
+    # parameter_histogram()
