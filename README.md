@@ -1,5 +1,5 @@
 
-# Subsidence at Wairakei Geothermal Field
+# Subsidence at Wairākei Geothermal Field
 **Group 10**
 
 Angela Guo • Anna Fu • Chelsea Mao • Freddie Ma • Theo Lim

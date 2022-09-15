@@ -20,11 +20,11 @@ def solve_analytical(t0, t1, q0, P0, params):
 
         Returns
         -------
-        (t, P) : tuple of np.array
+        (t, P) : tuple of array-like
             Tuple of time vector (s) and analytical reservoir pressure solution vector (Pa).
-        (t, Pm) : tuple of np.array
+        (t, Pm) : tuple of array-like
             Tuple of time vector (s) and analytical mudstone pressure solution vector (Pa).
-        (t, P) : tuple of np.array
+        (t, P) : tuple of array-like
             Tuple of time vector (s) and analytical subsidence solution vector (m).
 
         Notes
@@ -32,6 +32,7 @@ def solve_analytical(t0, t1, q0, P0, params):
         Assume constant mass extraction rate `q0`.
         Assume ambient pressure `P0` is equal between the reservoir and mudstone.
         Assume initial pressure is equal to the ambient pressure.
+        Assume no slow drainage.
     """
     # unpack parameters
     [a, b1, b2, c, mv, L] = params
@@ -71,11 +72,11 @@ def solve_numerical(t0, t1, h, q0, P0, params):
 
         Returns
         -------
-        (t, P) : tuple of np.array
+        (t, P) : tuple of array-like
             Tuple of time vector (s) and numerical reservoir pressure solution vector (Pa).
-        (t, Pm) : tuple of np.array
+        (t, Pm) : tuple of array-like
             Tuple of time vector (s) and numerical mudstone pressure solution vector (Pa).
-        (t, P) : tuple of np.array
+        (t, P) : tuple of array-like
             Tuple of time vector (s) and numerical subsidence solution vector (m).
 
         Notes
@@ -114,22 +115,22 @@ def error_analysis(analytical, numerical):
 
         Parameters
         ----------
-        analytical : tuple of np.array
+        analytical : tuple of array-like
             Tuple containing the analytical time vector and analytical solution vector in order.
-        numerical : tuple of np.array
+        numerical : tuple of array-like
             Tuple containing the numerical time vector and numerical solution vector in order.
 
         Returns
         -------
-        t : np.array
-            Numerical time vector (excluding bad points).
-        error : np.array
-            Relative error between analytical and numerical solutions (excluding bad points).
+        t : array-like
+            Numerical time vector.
+        error : array-like
+            Relative error between analytical and numerical solutions.
 
         Notes
         -----
-        Size of np.array within each tuple should be the same.
-        Error with denominator zero and corresponding time removed.
+        Size of array within each tuple should be the same.
+        Errors with denominator zero and corresponding time removed.
     """
     # find numerical times
     t = numerical[0]
@@ -204,13 +205,12 @@ def time_step_convergence(t0, t1, q0, P0, params):
 
     # step through each time step
     for h in time_steps:
-        # solve reservoir pressure
+        # obtain time range
         t = time_range(t0, t1, h)
 
-        # calculate mass extraction and derivative
+        # constant mass extraction rate
         q = q0 * np.ones(len(t), )
-        dqdt = np.divide(np.diff(q), np.diff(t))
-        dqdt = np.append(dqdt, dqdt[-1])
+        dqdt = np.zeros(len(t), )
 
         # solve reservoir pressure
         _, P = solve_reservoir_ode(reservoir_ode, t0, t1, h, P0, q, dqdt, [a, b1, c, P0])
@@ -221,15 +221,13 @@ def time_step_convergence(t0, t1, q0, P0, params):
         final['Pm'].append(Pm[-1])
 
         # calculate subsidence
-        final['U'].append(subsidence_eqn(Pm[1], Pm0, mv, L))
+        final['U'].append(subsidence_eqn(Pm[-1], Pm0, mv, L))
 
     P_final = np.array(final['P'])
     Pm_final = np.array(final['Pm'])
     U_final = np.array(final['U'])
 
-    time_steps_recip = 1 / time_steps
-
-    return (time_steps_recip, P_final), (time_steps_recip, Pm_final), (time_steps_recip, U_final)
+    return (time_steps, P_final), (time_steps, Pm_final), (time_steps, U_final)
 
 
 def benchmark():
@@ -324,13 +322,14 @@ def plot_benchmark(analytical, numerical, error, timestep, label, final_label):
     ax2.set_ylabel("error against benchmark")
 
     # plot final solution at t = 10 for varying timesteps
-    ax3.plot(*timestep, "x")
+    ax3.plot(1/timestep[0], timestep[1], "x")
     ax3.set_title("timestep convergence")
     ax3.set_xlabel("1/Δt")
     ax3.set_ylabel(final_label)
     ax3.set_xscale("log")
 
     # display plots
+    fig.subplots_adjust(wspace=0.3)
     fig.set_size_inches(15, 5)
     plt.show()
 

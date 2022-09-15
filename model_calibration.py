@@ -72,7 +72,6 @@ def dq_dt(t, q):
         --------
         dqdt : array-like
             Vector of the rate of change of the mass extraction rate.
-
     '''
     dqdt = np.divide(np.diff(q), np.diff(t))
     dqdt = np.append(dqdt, dqdt[-1])
@@ -131,17 +130,20 @@ def plot_model():
 
     # plot pressure observations and numerical solution
     ax1.plot(time_pres, pres, '.', t, P)
+    ax1.set_title('Best-fit reservoir pressure model')
     ax1.set_ylabel('reservoir pressure [bars]')
     ax1.set_xlabel('time [years]')
     ax1.legend(("observations", "model"))
 
     # plot subsidence observations and numerical solution
     ax2.plot(time_sub, sub, '.', t, U)
+    ax2.set_title('Best-fit subsidence model')
     ax2.set_ylabel('subsidence [m]')
     ax2.set_xlabel('time [years]')
-    ax2.legend(("observations", "model"))
+    ax2.legend(('observations', 'model'))
 
     # display the figure
+    fig.tight_layout()
     fig.set_size_inches(10, 6)
     plt.show()
 
@@ -190,15 +192,18 @@ def plot_misfit(slow_drainage=False):
 
     # plot pressure observations and numerical solution
     ax1.plot(time, pres, '.', t, P)
+    ax1.set_title("Reservoir pressure")
     ax1.set_ylabel('reservoir pressure [bars]')
     ax1.set_xlabel('time [years]')
-    ax1.legend(("observations", "model"))
+    ax1.legend(('observations', 'model'))
 
     # plot subsidence observations and numerical solution
     ax2.plot(time, misfit, 'x', time, np.zeros(len(time)), '--')
+    ax2.set_title('Pressure misfit')
     ax2.set_ylabel('pressure misfit [bars]')
     ax2.set_xlabel('time [years]')
 
+    fig.tight_layout()
     fig.set_size_inches(10, 6)
     plt.show()
 

@@ -39,6 +39,9 @@ def plot_data():
     par1.set_ylabel("pressure [bars]")
     par2.set_ylabel("mass extraction [kg/s]")
 
+    # set title
+    host.set_title("Historical data from Wairakei Geothermal system")
+
     # show legend
     host.legend(loc="lower right")
 

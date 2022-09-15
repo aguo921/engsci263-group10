@@ -112,6 +112,7 @@ def calibrate_reservoir_pressure():
 
     # plot the observations and the numerical data
     ax.plot(to, Po, '.', ti, Pi)
+    ax.set_title('Best-fit reservoir pressure model')
     ax.set_ylabel('reservoir pressure [bars]')
     ax.set_xlabel('time [years]')
     ax.legend(("observations", "model"))
@@ -173,6 +174,7 @@ def calibrate_subsidence():
 
     # plot the observations and the numerical data
     ax.plot(to, Uo, '.', t, subsidence)
+    ax.set_title('Best-fit subsidence model')
     ax.set_ylabel('subsidence [m]')
     ax.set_xlabel('time [years]')
     ax.legend(("observations", "model"))

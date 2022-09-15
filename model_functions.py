@@ -58,7 +58,7 @@ def subsidence_eqn(P, P0, mv, L):
 
         Parameters
         ----------
-        P : np.array
+        P : array-like
             Vector of fluid pressure in mudstone (bar).
         P0 : float
             Ambient mudstone pressure (bar).
@@ -69,7 +69,7 @@ def subsidence_eqn(P, P0, mv, L):
 
         Returns
         -------
-        U : np.array
+        U : array-like
             Vector of subsidence at the centre of the bowl (m).
     """
     return mv*L*(P0-P)
@@ -100,18 +100,18 @@ def solve_reservoir_ode(f, t0, t1, dt, P0, q, dqdt, pars):
             Time step (year).
         P0 : float
             Initial reservoir pressure (bar).
-        q : np.array
+        q : array-like
             Vector of interpolated mass extraction values (kg/s).
-        dqdt : np.array
+        dqdt : array-like
             Vector of derivative of mass extraction interpolation function (kg/s^2).
         pars : list
             List of reservoir pressure ODE parameters.
 
         Returns
         -------
-        t : np.array
+        t : array-like
             Vector of time (year).
-        P : np.array
+        P : array-like
             Vector of reservoir pressure (bar).
 
         Notes
@@ -153,7 +153,7 @@ def solve_mudstone_ode(f, t0, t1, dt, P, Pm0, pars):
             Final time (year).
         dt : float
             Time step (year).
-        P : np.array
+        P : array-like
             Vector of reservoir pressure values (bar).
         Pm0 : float
             Initial mudstone pressure (bar).
@@ -162,9 +162,9 @@ def solve_mudstone_ode(f, t0, t1, dt, P, Pm0, pars):
 
         Returns
         -------
-        t : np.array
+        t : array-like
             Vector of time (year).
-        Pm : np.array
+        Pm : array-like
             Vector of mudstone pressure (bar).
 
         Notes

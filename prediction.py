@@ -13,10 +13,6 @@ def forecast(q1):
         Returns:
         --------
         none
-
-        Notes:
-        ------
-        This function called within if __name__ == "__main__":
     '''
     a = 0.0015377621974240604  # lumped parameter for forced extraction term
     b1 = 0.06624924440742241  # lumped parameter for recharge term (into reservoir)
@@ -90,7 +86,9 @@ def forecast(q1):
     ax1.plot(ti, pressure[0][:len(ti)], label="best-fit model")
     ax2.plot(ti, subsidence[0][:len(ti)], label="best-fit model")
 
-    # label axes
+    # label title and axes
+    ax1.set_title('Reservoir pressure predictions')
+    ax2.set_title('Subsidence predictions')
     ax1.set_ylabel('pressure [bar]')
     ax2.set_ylabel('subsidence [m]')
     ax1.set_xlabel('time [yrs]')
@@ -101,6 +99,7 @@ def forecast(q1):
     ax2.legend()
 
     # display figure
+    fig.tight_layout()
     fig.set_size_inches(12, 6)
     plt.show()
 
